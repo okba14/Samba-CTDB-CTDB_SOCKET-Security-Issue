@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     
-    <!-- ENHANCED SEO: Meta Tags for Maximum Indexing -->
     <title>Samba CTDB_SOCKET Security Vulnerability | Bugzilla #15921 - Analysis</title>
     <meta name="description" content="In-depth security analysis and responsible disclosure of CTDB_SOCKET vulnerability in Samba (Bugzilla #15921). Research by GUIAR OQBA. Includes technical details, symlink race condition explanation, and patch verification.">
     <meta name="keywords" content="Samba, CTDB, CTDB_SOCKET, Security Vulnerability, Symlink Race, Bugzilla 15921, GUIAR OQBA, Responsible Disclosure, Cyber Security, Linux Vulnerability, CVE analysis">
@@ -13,7 +12,6 @@
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
     <link rel="canonical" href="https://gitlab.com/samba-team/samba/-/merge_requests/4239/diffs?commit_id=692cdabe3a43bb9cc9e3e050415bd0ef6be9ee83"> 
 
-    <!-- OPEN GRAPH / Social Media -->
     <meta property="og:type" content="article">
     <meta property="og:title" content="Samba CTDB_SOCKET Security Issue - Legendary Analysis">
     <meta property="og:description" content="Technical deep dive into the Symlink Race vulnerability in Samba CTDB. Reported by GUIAR OQBA.">
@@ -21,15 +19,12 @@
     <meta property="og:url" content="https://github.com/okba14/Samba-CTDB-CTDB_SOCKET-Security-Issue/">
     <meta name="twitter:card" content="summary_large_image">
 
-    <!-- CUSTOM FAVICON (SVG Data URI - Terminal Icon) -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22 fill=%2300ff41%22>_%3E%3C/text%3E</svg>">
 
-    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
 
-    <!-- SCHEMA.ORG JSON-LD Structured Data -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -65,7 +60,7 @@
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            cursor: crosshair; 
+            cursor: default; 
         }
 
         body {
@@ -77,7 +72,6 @@
             font-size: 17px;
         }
 
-        /* --- BOOT SEQUENCE OVERLAY --- */
         #boot-sequence {
             position: fixed;
             top: 0;
@@ -102,7 +96,6 @@
             text-shadow: 0 0 5px var(--neon-green);
         }
 
-        /* --- BACKGROUND CANVAS --- */
         #particle-canvas {
             position: fixed;
             top: 0;
@@ -113,7 +106,6 @@
             opacity: 0.4;
         }
 
-        /* --- CRT SCANLINE EFFECT --- */
         .scanlines {
             position: fixed;
             top: 0;
@@ -133,7 +125,6 @@
             opacity: 0.2;
         }
         
-        /* Subtle flicker animation */
         @keyframes flicker {
             0% { opacity: 0.97; }
             5% { opacity: 0.95; }
@@ -158,13 +149,12 @@
             animation: flicker 0.15s infinite;
         }
 
-        /* --- CONTAINER --- */
         .container {
             max-width: 1000px;
             margin: 0 auto;
             padding: 80px 20px;
             position: relative;
-            z-index: 1;
+            z-index: 101;
             opacity: 0; 
             animation: fadeInContent 1s ease-out 3.5s forwards;
         }
@@ -173,7 +163,6 @@
             to { opacity: 1; }
         }
 
-        /* --- BADGES --- */
         .badges-container {
             display: flex;
             flex-wrap: wrap;
@@ -195,6 +184,7 @@
             box-shadow: 0 0 8px rgba(0,0,0,0.5);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+            cursor: default;
         }
 
         .cb-sec { color: var(--neon-red); border-color: var(--neon-red); background: rgba(255, 0, 60, 0.05); }
@@ -209,7 +199,6 @@
             color: #000;
         }
 
-        /* --- HEADER & GLITCH TEXT --- */
         header {
             text-align: center;
             margin-bottom: 120px;
@@ -224,9 +213,9 @@
             margin-bottom: 10px;
             position: relative;
             font-weight: 700;
+            cursor: default;
         }
 
-        /* Glitch Animation */
         .glitch {
             position: relative;
         }
@@ -275,9 +264,9 @@
             color: var(--neon-blue);
             letter-spacing: 4px;
             text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+            cursor: default;
         }
 
-        /* --- SECTIONS & CARDS --- */
         section {
             margin-bottom: 100px;
             perspective: 1000px;
@@ -294,7 +283,6 @@
             padding: 45px;
             position: relative;
             backdrop-filter: blur(10px);
-            /* Glassmorphism */
             background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
             box-shadow: 0 20px 50px rgba(0,0,0,0.5);
             clip-path: polygon(
@@ -334,7 +322,6 @@
         p { margin-bottom: 25px; color: #b0b0b0; font-weight: 300; }
         strong { color: var(--text-highlight); font-weight: 700; text-shadow: 0 0 5px rgba(255,255,255,0.2); }
 
-        /* --- CODE BLOCKS --- */
         pre {
             background: #080808;
             border: 1px solid #333;
@@ -371,7 +358,6 @@
             border: 1px solid rgba(0, 243, 255, 0.2);
         }
 
-        /* --- TABLE --- */
         table {
             width: 100%;
             border-collapse: collapse;
@@ -400,7 +386,6 @@
             color: #fff;
         }
 
-        /* --- LISTS & BLOCKQUOTE --- */
         ul { margin-left: 35px; margin-bottom: 25px; }
         li { margin-bottom: 12px; color: #a0a0a0; }
         li::marker { color: var(--neon-green); font-size: 1.2em; }
@@ -428,7 +413,6 @@
             border: 1px solid var(--neon-red);
         }
 
-        /* --- TECH FLOW --- */
         .tech-flow {
             display: flex;
             justify-content: center;
@@ -455,7 +439,6 @@
             font-family: var(--font-code);
         }
 
-        /* --- CREDIT & LINKEDIN --- */
         .credit-section {
             text-align: center;
             margin-top: 120px;
@@ -496,10 +479,11 @@
             gap: 20px;
             justify-content: center;
             margin-top: 25px;
+            flex-wrap: wrap;
         }
 
         .cyber-btn {
-            padding: 10px 25px;
+            padding: 12px 30px;
             text-decoration: none;
             font-family: var(--font-code);
             font-size: 0.9rem;
@@ -509,15 +493,31 @@
             transition: all 0.3s;
             position: relative;
             overflow: hidden;
+            cursor: pointer;
+            z-index: 10;
+            display: inline-block;
+            background: rgba(0,0,0,0.3);
         }
 
         .cyber-btn:hover {
             background: var(--neon-blue);
             color: #000;
             box-shadow: 0 0 20px var(--neon-blue);
+            transform: translateY(-2px);
         }
 
-        /* --- FOOTER --- */
+        .email-btn {
+            border-color: #ff9d00;
+            color: #ff9d00;
+            background: rgba(255, 157, 0, 0.1);
+        }
+
+        .email-btn:hover {
+            background: #ff9d00;
+            color: #000;
+            box-shadow: 0 0 20px #ff9d00;
+        }
+
         footer {
             text-align: center;
             padding: 50px;
@@ -528,7 +528,6 @@
             color: #555;
         }
 
-        /* --- UTILS --- */
         .hidden-section { opacity: 0; transform: translateY(30px); transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
         .visible-section { opacity: 1; transform: translateY(0); }
 
@@ -537,19 +536,17 @@
             .container { padding: 40px 15px; }
             .card { padding: 25px; }
             .profile-card { width: 100%; }
+            .researcher-links { flex-direction: column; }
         }
     </style>
 </head>
 <body>
 
-<!-- BOOT SEQUENCE (Loading Animation) -->
 <div id="boot-sequence"><div id="boot-text" class="boot-text"></div></div>
 
-<!-- VISUAL EFFECTS -->
 <canvas id="particle-canvas"></canvas>
 <div class="scanlines"></div>
 
-<!-- MAIN CONTENT -->
 <div class="container">
     
     <header>
@@ -565,7 +562,6 @@
 
     <div class="content-wrapper">
 
-        <!-- OVERVIEW -->
         <section class="hidden-section">
             <div class="card-wrapper">
                 <div class="card">
@@ -579,7 +575,6 @@
             </div>
         </section>
 
-        <!-- AFFECTED COMPONENTS -->
         <section class="hidden-section">
             <div class="card-wrapper">
                 <div class="card">
@@ -614,7 +609,6 @@
             </div>
         </section>
 
-        <!-- ISSUE SUMMARY -->
         <section class="hidden-section">
             <div class="card-wrapper">
                 <div class="card">
@@ -635,7 +629,6 @@
             </div>
         </section>
 
-        <!-- TECHNICAL DETAILS -->
         <section class="hidden-section">
             <div class="card-wrapper">
                 <div class="card">
@@ -656,17 +649,16 @@
             </div>
         </section>
 
-        <!-- FIX & GITLAB LINK -->
         <section class="hidden-section">
             <div class="card-wrapper">
                 <div class="card">
                     <h2><span>05.</span> FIX AND CODE CHANGES</h2>
                     <h3>Diff Reference</h3>
                     <p>The fix restricts <code>CTDB_SOCKET</code> to test mode only.</p>
-                    <p>
-                        🔗 <a href="https://gitlab.com/samba-team/samba/-/merge_requests/4239/diffs?commit_id=692cdabe3a43bb9cc9e3e050415bd0ef6be9ee83" target="_blank" rel="noopener noreferrer" class="cyber-btn">View GitLab Merge Request</a>
-                    </p>
-                    <ul>
+                    <div style="margin-top: 20px;">
+                        <a href="https://gitlab.com/samba-team/samba/-/merge_requests/4239/diffs?commit_id=692cdabe3a43bb9cc9e3e050415bd0ef6be9ee83" target="_blank" rel="noopener noreferrer" class="cyber-btn">View GitLab Merge Request</a>
+                    </div>
+                    <ul style="margin-top: 20px;">
                         <li>Enforcement of <code>CTDB_TEST_MODE</code></li>
                         <li>Additional warnings added to discourage unintended usage</li>
                     </ul>
@@ -674,7 +666,6 @@
             </div>
         </section>
 
-        <!-- RESOLUTION -->
         <section class="hidden-section">
             <div class="card-wrapper">
                 <div class="card" style="border-left: 4px solid var(--neon-green);">
@@ -686,7 +677,6 @@
             </div>
         </section>
 
-        <!-- CREDIT & LINKEDIN -->
         <section class="hidden-section">
             <div class="card-wrapper">
                 <div class="card">
@@ -697,11 +687,9 @@
                             <div class="researcher-name">GUIAR OQBA</div>
                             <p style="color: #666; margin-bottom: 30px; letter-spacing: 1px;">SECURITY RESEARCHER</p>
                             
-                            <!-- LINKS -->
                             <div class="researcher-links">
-                                <a href="mailto:techokba@gmail.com" class="cyber-btn">Email Contact</a>
-                                <!-- LinkedIn Requested Link -->
-                                <a href="https://www.linkedin.com/in/guiar-oqba-0207a9253/" target="_blank" rel="noopener noreferrer" class="cyber-btn" style="border-color: #0077b5; color: #0077b5;">LinkedIn Profile</a>
+                                <a href="mailto:techokba@gmail.com" class="cyber-btn email-btn">✉️ techokba@gmail.com</a>
+                                <a href="https://www.linkedin.com/in/guiar-oqba-0207a9253/" target="_blank" rel="noopener noreferrer" class="cyber-btn">LinkedIn Profile</a>
                             </div>
                         </div>
                     </div>
@@ -721,7 +709,6 @@
 </div>
 
 <script>
-    // --- 1. BOOT SEQUENCE ANIMATION ---
     const bootText = document.getElementById('boot-text');
     const bootSequence = document.getElementById('boot-sequence');
     const bootLines = [
@@ -749,10 +736,8 @@
             }, 500);
         }
     }
-    // Start boot sequence
     setTimeout(typeBootLine, 500);
 
-    // --- 2. ENHANCED CANVAS PARTICLES ---
     const canvas = document.getElementById('particle-canvas');
     const ctx = canvas.getContext('2d');
     let width, height;
@@ -789,13 +774,11 @@
         }
     }
 
-    // Create more particles for density
     for (let i = 0; i < 80; i++) particles.push(new Particle());
 
     function animateCanvas() {
         ctx.clearRect(0, 0, width, height);
         
-        // Draw connections
         for (let i = 0; i < particles.length; i++) {
             let p1 = particles[i];
             p1.update();
@@ -807,7 +790,6 @@
                 let dist = Math.sqrt(dx*dx + dy*dy);
                 if (dist < 180) {
                     ctx.beginPath();
-                    // Dynamic color based on particle types
                     let color = p1.color === '#00f3ff' ? `rgba(0, 243, 255, ${1 - dist/180})` : `rgba(0, 255, 65, ${1 - dist/180})`;
                     ctx.strokeStyle = color;
                     ctx.lineWidth = 0.6;
@@ -821,8 +803,6 @@
     }
     animateCanvas();
 
-
-    // --- 3. ADVANCED 3D TILT EFFECT ---
     const cards = document.querySelectorAll('.card-wrapper');
 
     cards.forEach(card => {
@@ -836,7 +816,6 @@
             const centerX = rect.width / 2;
             const centerY = rect.height / 2;
             
-            // Calculate rotation (limit degrees)
             const rotateX = ((y - centerY) / centerY) * -3; 
             const rotateY = ((x - centerX) / centerX) * 3;
 
@@ -848,8 +827,6 @@
         });
     });
 
-
-    // --- 4. SCROLL REVEAL & TYPING ANIMATION ---
     const observerOptions = { threshold: 0.1 };
 
     const observer = new IntersectionObserver((entries) => {
@@ -857,7 +834,6 @@
             if (entry.isIntersecting) {
                 entry.target.classList.add('visible-section');
                 
-                // Trigger typing effect for code blocks inside this section
                 const codeBlock = entry.target.querySelector('code.typing-text');
                 if (codeBlock && !codeBlock.getAttribute('data-typed')) {
                     const text = codeBlock.innerText;
@@ -869,7 +845,6 @@
                         if (i < text.length) {
                             codeBlock.innerText += text.charAt(i);
                             i++;
-                            // Random typing speed for realism
                             setTimeout(type, Math.random() * 50 + 20); 
                         }
                     };
