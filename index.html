@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Samba CTDB_SOCKET Security Issue - Bugzilla #15921</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #000000;
+            --card-bg: rgba(10, 10, 10, 0.85);
+            --card-border: #1a1a1a;
+            --text-main: #c0c0c0;
+            --text-highlight: #ffffff;
+            --neon-green: #00ff41; /* Matrix Green */
+            --neon-blue: #00f3ff;  /* Cyber Blue */
+            --neon-red: #ff003c;   /* Alert Red */
+            --neon-orange: #ff9d00;
+            --font-tech: 'Rajdhani', sans-serif;
+            --font-code: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            cursor: default; /* We'll use custom cursor styling logic conceptually */
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-tech);
+            overflow-x: hidden;
+            line-height: 1.7;
+            font-size: 17px;
+        }
+
+        /* Canvas Background */
+        #particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.6;
+        }
+
+        /* Scanline Overlay */
+        .scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(
+                to bottom,
+                rgba(255,255,255,0),
+                rgba(255,255,255,0) 50%,
+                rgba(0,0,0,0.2) 50%,
+                rgba(0,0,0,0.2)
+            );
+            background-size: 100% 4px;
+            z-index: 100;
+            pointer-events: none;
+            opacity: 0.15;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 60px 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Custom Badges (No Images) */
+        .badges-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .cyber-badge {
+            font-family: var(--font-code);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            padding: 6px 12px;
+            border-radius: 2px;
+            letter-spacing: 1px;
+            border: 1px solid currentColor;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 0 5px currentColor;
+            transition: all 0.3s ease;
+        }
+
+        .cb-sec { color: var(--neon-red); border-color: var(--neon-red); background: rgba(255, 0, 60, 0.05); }
+        .cb-proj { color: var(--neon-blue); border-color: var(--neon-blue); background: rgba(0, 243, 255, 0.05); }
+        .cb-comp { color: var(--neon-orange); border-color: var(--neon-orange); background: rgba(255, 157, 0, 0.05); }
+        .cb-fix { color: var(--neon-green); border-color: var(--neon-green); background: rgba(0, 255, 65, 0.05); }
+
+        .cyber-badge:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px currentColor;
+            background: currentColor;
+            color: #000;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 100px;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 4rem;
+            text-transform: uppercase;
+            letter-spacing: -2px;
+            color: var(--text-highlight);
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+            position: relative;
+        }
+
+        h1::after {
+            content: '_';
+            animation: blink 1s infinite;
+            color: var(--neon-red);
+        }
+
+        .subtitle {
+            font-family: var(--font-code);
+            font-size: 1.1rem;
+            color: var(--neon-blue);
+            letter-spacing: 2px;
+        }
+
+        /* Section Styling & 3D Tilt Cards */
+        section {
+            margin-bottom: 80px;
+            perspective: 1000px; /* For 3D effect */
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            padding: 40px;
+            border-radius: 4px;
+            position: relative;
+            backdrop-filter: blur(5px);
+            transform-style: preserve-3d;
+            transition: transform 0.1s ease-out; /* Fast response for JS */
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+
+        /* Decorative Corners */
+        .card::before, .card::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--neon-green);
+            transition: all 0.3s ease;
+            opacity: 0.5;
+        }
+        .card::before { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+        .card::after { bottom: -1px; right: -1px; border-left: none; border-top: none; }
+
+        .card:hover::before, .card:hover::after {
+            width: 100%;
+            height: 100%;
+            opacity: 1;
+            border-color: var(--neon-blue);
+        }
+
+        h2 {
+            font-size: 2rem;
+            margin-bottom: 25px;
+            color: var(--text-highlight);
+            border-bottom: 1px solid #333;
+            padding-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        h2 span {
+            color: var(--neon-green);
+            font-family: var(--font-code);
+            font-size: 1.5rem;
+        }
+
+        p { margin-bottom: 20px; color: #a0a0a0; }
+        strong { color: var(--text-highlight); font-weight: 700; }
+
+        /* Code Blocks */
+        pre {
+            background: #050505;
+            border: 1px solid #222;
+            padding: 20px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-family: var(--font-code);
+            color: var(--neon-green);
+            margin: 20px 0;
+            position: relative;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+        }
+
+        pre::before {
+            content: 'SYSTEM_LOG > EXEC';
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            font-size: 0.6rem;
+            color: #555;
+            letter-spacing: 1px;
+        }
+
+        code {
+            font-family: var(--font-code);
+        }
+        
+        p code, li code {
+            background: rgba(255,255,255,0.1);
+            padding: 2px 5px;
+            border-radius: 2px;
+            color: var(--neon-blue);
+            font-size: 0.9em;
+        }
+
+        /* Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-family: var(--font-code);
+            font-size: 0.9rem;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 15px;
+            border-bottom: 1px solid #222;
+        }
+
+        th {
+            color: var(--neon-blue);
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 1.5px;
+        }
+
+        tr:hover td {
+            background: rgba(255,255,255,0.02);
+            color: #fff;
+        }
+
+        /* Lists */
+        ul { margin-left: 30px; margin-bottom: 20px; }
+        li { margin-bottom: 10px; color: #a0a0a0; }
+        li::marker { color: var(--neon-green); }
+
+        /* Blockquote */
+        blockquote {
+            border-left: 4px solid var(--neon-red);
+            margin: 25px 0;
+            padding: 15px 25px;
+            background: rgba(255, 0, 60, 0.03);
+            color: #d0d0d0;
+            font-style: italic;
+            position: relative;
+        }
+
+        blockquote::before {
+            content: '⚠';
+            position: absolute;
+            left: 10px;
+            top: 15px;
+            color: var(--neon-red);
+            font-family: var(--font-code);
+            opacity: 0.5;
+        }
+
+        /* Tech Sequence */
+        .tech-flow {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+
+        .tech-box {
+            background: #000;
+            border: 1px solid var(--neon-green);
+            padding: 15px 30px;
+            font-family: var(--font-code);
+            color: var(--neon-green);
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.1);
+            font-weight: bold;
+        }
+
+        .tech-arrow {
+            color: #555;
+            font-size: 1.5rem;
+        }
+
+        /* Footer / Credit */
+        .credit-section {
+            text-align: center;
+            margin-top: 100px;
+            border-top: 1px solid #333;
+            padding-top: 50px;
+        }
+
+        .profile-card {
+            display: inline-block;
+            border: 2px solid var(--neon-green);
+            padding: 40px;
+            background: rgba(0,0,0,0.8);
+            position: relative;
+            transform: skewX(-10deg);
+        }
+
+        .profile-content {
+            transform: skewX(10deg);
+        }
+
+        .researcher-name {
+            font-size: 2.5rem;
+            color: #fff;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .researcher-email {
+            color: var(--neon-blue);
+            font-family: var(--font-code);
+            text-decoration: none;
+            border-bottom: 1px solid var(--neon-blue);
+        }
+
+        .disclosure-notice {
+            margin-top: 30px;
+            font-size: 0.8rem;
+            color: #666;
+            letter-spacing: 1px;
+        }
+
+        /* Animations */
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        .hidden-section { opacity: 0; transform: translateY(50px); transition: all 0.8s ease-out; }
+        .visible-section { opacity: 1; transform: translateY(0); }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 { font-size: 2.5rem; }
+            .container { padding: 40px 15px; }
+            .card { padding: 25px; }
+        }
+
+        a { color: var(--neon-blue); text-decoration: none; transition: 0.2s; }
+        a:hover { text-shadow: 0 0 10px var(--neon-blue); }
+    </style>
+</head>
+<body>
+
+<canvas id="particle-canvas"></canvas>
+<div class="scanlines"></div>
+
+<div class="container">
+    
+    <header>
+        <div class="badges-container">
+            <div class="cyber-badge cb-sec"><span class="dot"></span> Security: Critical</div>
+            <div class="cyber-badge cb-proj"><span class="dot"></span> Project: Samba</div>
+            <div class="cyber-badge cb-comp"><span class="dot"></span> Component: CTDB</div>
+            <div class="cyber-badge cb-fix"><span class="dot"></span> Status: Fixed</div>
+        </div>
+        <h1>Samba CTDB_SOCKET</h1>
+        <p class="subtitle">Security Vulnerability Analysis // Bugzilla #15921</p>
+    </header>
+
+    <div class="content-wrapper">
+
+        <!-- OVERVIEW -->
+        <section class="hidden-section">
+            <div class="tilt-card">
+                <div class="card">
+                    <h2><span>01.</span> OVERVIEW</h2>
+                    <p>This repository documents a security issue identified in the <strong>CTDB (Clustered Trivial Database)</strong> component of <strong>Samba</strong>, related to the handling of the <code>CTDB_SOCKET</code> environment variable outside of test mode.</p>
+                    <p>The issue was <strong>responsibly reported</strong>, officially <strong>acknowledged</strong>, and <strong>fixed upstream</strong> by the Samba Team.</p>
+                    <blockquote>
+                        This repository exists as a <strong>technical archive and long-term reference</strong>. Publicly indexed and searchable.
+                    </blockquote>
+                </div>
+            </div>
+        </section>
+
+        <!-- AFFECTED COMPONENTS -->
+        <section class="hidden-section">
+            <div class="tilt-card">
+                <div class="card">
+                    <h2><span>02.</span> AFFECTED COMPONENTS</h2>
+                    <table>
+                        <tr>
+                            <th>Field</th>
+                            <th>Value</th>
+                        </tr>
+                        <tr>
+                            <td><strong>Project</strong></td>
+                            <td>Samba</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Subsystem</strong></td>
+                            <td>CTDB (<code>ctdb-common</code>)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Source File</strong></td>
+                            <td><code>ctdb_daemon.c</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Function</strong></td>
+                            <td><code>ux_socket_bind()</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Variable</strong></td>
+                            <td><code>CTDB_SOCKET</code></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ISSUE SUMMARY -->
+        <section class="hidden-section">
+            <div class="tilt-card">
+                <div class="card">
+                    <h2><span>03.</span> ISSUE SUMMARY</h2>
+                    <p>At the time of discovery, the environment variable:</p>
+                    <pre><code class="typing-text">CTDB_SOCKET</code></pre>
+                    <p>Could be used <strong>outside of test mode</strong>, despite never being intended for production usage.</p>
+                    <p>This introduced a <strong>potential security risk</strong> regarding socket security:</p>
+                    <ul>
+                        <li>Socket path influenced externally via <code>CTDB_SOCKET</code></li>
+                        <li>Code applied <code>chown(2)</code> and <code>chmod(2)</code> post-bind</li>
+                        <li>Exposed a <strong>symlink race window</strong> on the filesystem</li>
+                    </ul>
+                    <blockquote>
+                        While no exploit was demonstrated, this represented an <strong>unnecessary and avoidable attack surface</strong>.
+                    </blockquote>
+                </div>
+            </div>
+        </section>
+
+        <!-- TECHNICAL DETAILS -->
+        <section class="hidden-section">
+            <div class="tilt-card">
+                <div class="card">
+                    <h2><span>04.</span> TECHNICAL DETAILS</h2>
+                    <p>The function <code>ux_socket_bind()</code> performed the following sequence on a UNIX domain socket path:</p>
+                    
+                    <div class="tech-flow">
+                        <div class="tech-box">bind(2)</div>
+                        <div class="tech-arrow">→</div>
+                        <div class="tech-box">chown(2)</div>
+                        <div class="tech-arrow">→</div>
+                        <div class="tech-box">chmod(2)</div>
+                    </div>
+
+                    <p>When the socket path is controllable, post-bind permission changes may allow a symbolic link swap during operation.</p>
+                    <p>This pattern is a well-known class of filesystem race condition.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- FIX -->
+        <section class="hidden-section">
+            <div class="tilt-card">
+                <div class="card">
+                    <h2><span>05.</span> FIX AND CODE CHANGES</h2>
+                    <h3>Diff Reference</h3>
+                    <p>The fix restricts <code>CTDB_SOCKET</code> to test mode only.</p>
+                    <p>
+                        🔗 <a href="https://gitlab.com/samba-team/samba/-/merge_requests/4239/diffs?commit_id=692cdabe3a43bb9cc9e3e050415bd0ef6be9ee83" target="_blank">View Merge Request Diff</a>
+                    </p>
+                    <ul>
+                        <li>Enforcement of <code>CTDB_TEST_MODE</code></li>
+                        <li>Additional warnings added to discourage unintended usage</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- RESOLUTION -->
+        <section class="hidden-section">
+            <div class="tilt-card">
+                <div class="card" style="border-left: 4px solid var(--neon-green);">
+                    <h2><span>06.</span> RESOLUTION</h2>
+                    <p>The issue was resolved by enforcing original design intent:</p>
+                    <pre><code class="typing-text">CTDB_SOCKET respected ONLY when CTDB_TEST_MODE is enabled</code></pre>
+                    <p><strong>Result:</strong> The vulnerable code path is eliminated from non-test environments.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- CREDIT & DISCLOSURE -->
+        <section class="hidden-section">
+            <div class="tilt-card">
+                <div class="card">
+                    <h2><span>07.</span> CREDIT</h2>
+                    <div class="credit-section">
+                        <div class="profile-card">
+                            <div class="profile-content">
+                                <div style="font-size: 2rem; margin-bottom: 10px;">🇩🇿</div>
+                                <div class="researcher-name">GUIAR OQBA</div>
+                                <p style="color: #666; margin-bottom: 20px;">SECURITY RESEARCHER</p>
+                                <a href="mailto:techokba@gmail.com" class="researcher-email">techokba@gmail.com</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <footer>
+        <div class="disclosure-notice">
+            <p>DISCLOSURE: RESPONSIBLE DISCLOSURE // FIX MERGED UPSTREAM</p>
+        </div>
+    </footer>
+
+</div>
+
+<script>
+    // 1. CANVAS PARTICLE NETWORK
+    const canvas = document.getElementById('particle-canvas');
+    const ctx = canvas.getContext('2d');
+    let width, height;
+    let particles = [];
+
+    function resize() {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+
+    class Particle {
+        constructor() {
+            this.x = Math.random() * width;
+            this.y = Math.random() * height;
+            this.vx = (Math.random() - 0.5) * 0.5;
+            this.vy = (Math.random() - 0.5) * 0.5;
+            this.size = Math.random() * 2 + 1;
+        }
+        update() {
+            this.x += this.vx;
+            this.y += this.vy;
+            if (this.x < 0 || this.x > width) this.vx *= -1;
+            if (this.y < 0 || this.y > height) this.vy *= -1;
+        }
+        draw() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fillStyle = '#00ff41'; // Neon Green
+            ctx.fill();
+        }
+    }
+
+    for (let i = 0; i < 60; i++) particles.push(new Particle());
+
+    function animateCanvas() {
+        ctx.clearRect(0, 0, width, height);
+        
+        // Draw connections
+        for (let i = 0; i < particles.length; i++) {
+            let p1 = particles[i];
+            p1.update();
+            p1.draw();
+            for (let j = i + 1; j < particles.length; j++) {
+                let p2 = particles[j];
+                let dx = p1.x - p2.x;
+                let dy = p1.y - p2.y;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist < 150) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = `rgba(0, 255, 65, ${1 - dist/150})`;
+                    ctx.lineWidth = 0.5;
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.stroke();
+                }
+            }
+        }
+        requestAnimationFrame(animateCanvas);
+    }
+    animateCanvas();
+
+
+    // 2. 3D TILT EFFECT
+    const cards = document.querySelectorAll('.tilt-card');
+
+    cards.forEach(card => {
+        const inner = card.querySelector('.card');
+        
+        card.addEventListener('mousemove', (e) => {
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            
+            const rotateX = ((y - centerY) / centerY) * -5; // Max 5deg rotation
+            const rotateY = ((x - centerX) / centerX) * 5;
+
+            inner.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+        });
+
+        card.addEventListener('mouseleave', () => {
+            inner.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale3d(1, 1, 1)';
+        });
+    });
+
+
+    // 3. SCROLL REVEAL & TYPING ANIMATION
+    const observerOptions = {
+        threshold: 0.1
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible-section');
+                
+                // Trigger typing effect for code blocks inside this section
+                const codeBlock = entry.target.querySelector('code.typing-text');
+                if (codeBlock && !codeBlock.getAttribute('data-typed')) {
+                    const text = codeBlock.innerText;
+                    codeBlock.innerText = '';
+                    codeBlock.setAttribute('data-typed', 'true');
+                    
+                    let i = 0;
+                    const type = () => {
+                        if (i < text.length) {
+                            codeBlock.innerText += text.charAt(i);
+                            i++;
+                            setTimeout(type, 30); // Typing speed
+                        }
+                    };
+                    type();
+                }
+            }
+        });
+    }, observerOptions);
+
+    document.querySelectorAll('.hidden-section').forEach(section => {
+        observer.observe(section);
+    });
+
+</script>
+
+</body>
+</html>
