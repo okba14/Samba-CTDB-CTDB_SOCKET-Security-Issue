@@ -28,20 +28,50 @@
     <link rel="sitemap" type="application/xml" href="sitemap.xml">
 
     <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "TechArticle",
-      "headline": "Samba CTDB_SOCKET Security Issue - Bugzilla #15921",
-      "author": {
-        "@type": "Person",
-        "name": "GUIAR OQBA",
-        "url": "https://www.linkedin.com/in/guiar-oqba-0207a9253/"
-      },
-      "datePublished": "2023-10-01", 
-      "description": "Security analysis of symlink race condition in Samba CTDB_SOCKET handling.",
-      "keywords": "Samba, CTDB, Vulnerability, Linux Security"
-    }
-    </script>
+{
+  "@context": "https://schema.org",
+  "@type": "SecurityAdvisory",
+  "name": "Samba CTDB_SOCKET Symlink Race Vulnerability",
+  "headline": "Samba CTDB_SOCKET Security Vulnerability – Bugzilla #15921",
+  "description": "Responsible disclosure and in-depth technical analysis of a symlink race condition in Samba CTDB_SOCKET handling. The issue was reported and analyzed by GUIAR OQBA and later fixed by the Samba Team.",
+  "datePublished": "2025-09-25",
+  "dateModified": "2026-02-06",
+  "url": "https://okba14.github.io/Samba-CTDB-CTDB_SOCKET-Security-Issue/",
+  "author": {
+    "@type": "Person",
+    "name": "GUIAR OQBA",
+    "url": "https://www.linkedin.com/in/guiar-oqba-0207a9253/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Samba Team",
+    "url": "https://www.samba.org/"
+  },
+  "about": {
+    "@type": "SoftwareApplication",
+    "name": "Samba",
+    "operatingSystem": "Linux",
+    "applicationCategory": "Networking Software"
+  },
+  "isBasedOn": {
+    "@type": "SoftwareSourceCode",
+    "name": "Samba Merge Request !4239",
+    "codeRepository": "https://gitlab.com/samba-team/samba/-/merge_requests/4239"
+  },
+  "keywords": [
+    "Samba",
+    "CTDB",
+    "CTDB_SOCKET",
+    "Symlink Race",
+    "Security Vulnerability",
+    "Bugzilla 15921",
+    "GUIAR OQBA",
+    "Responsible Disclosure",
+    "Linux Security"
+  ]
+}
+</script>
+
 
     <style>
         :root {
